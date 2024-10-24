@@ -1,7 +1,5 @@
 .venv
 .vscode
-Dockerfile*
-docker-compose*
 */__pycache__/*
 db/*
 *.sqlite3
@@ -9,4 +7,4 @@ db/*
 *.pyo
 bin/
 *.lock
-
+.env

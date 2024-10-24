@@ -1,0 +1,43 @@
+networks:
+  guess-game-network:
+
+volumes:
+  postgres-data:
+
+services:
+  frontend:
+    build:
+      context: frontend
+      dockerfile: frontend.dockerfile
+    ports:
+      - "80:80"
+    networks:
+      - guess-game-network
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      dockerfile: backend.dockerfile
+    restart: always
+    env_file:
+      - ".env"
+      - ".env.example"
+    depends_on:
+      - db
+    networks:
+      - guess-game-network
+    deploy:
+      mode: replicated
+      replicas: 3
+
+  db:
+    image: postgres:11-alpine3.19
+    restart: always
+    env_file:
+      - ".env"
+      - ".env.example"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - guess-game-network
