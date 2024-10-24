@@ -5,10 +5,12 @@ volumes:
   postgres-data:
 
 services:
-  frontend:
+  nginx:
     build:
       context: frontend
       dockerfile: frontend.dockerfile
+    environment:
+      - REACT_APP_BACKEND_URL=http://nginx/api
     ports:
       - "80:80"
     networks:
