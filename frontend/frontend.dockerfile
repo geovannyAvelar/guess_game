@@ -1,5 +1,7 @@
 FROM node:18-alpine AS builder
 
+ARG REACT_APP_BACKEND_URL=http://localhost/api
+
 COPY . /guess_game
 
 COPY package*.json /guess_game
@@ -12,9 +14,9 @@ RUN npm run build
 
 FROM nginx:alpine
 
-COPY --from=builder /guess_game/* /usr/share/nginx/html
+COPY --from=builder /guess_game/build/ /usr/share/nginx/html/
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY default.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
