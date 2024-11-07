@@ -1,155 +1,41 @@
-Aqui está um exemplo de um arquivo `README.md` para o seu jogo:
-
----
 
 # Jogo de Adivinhação com Flask
 
 Este é um simples jogo de adivinhação desenvolvido utilizando o framework Flask. O jogador deve adivinhar uma senha criada aleatoriamente, e o sistema fornecerá feedback sobre o número de letras corretas e suas respectivas posições.
 
-## Funcionalidades
+## Design
 
-- Criação de um novo jogo com uma senha fornecida pelo usuário.
-- Adivinhe a senha e receba feedback se as letras estão corretas e/ou em posições corretas.
-- As senhas são armazenadas  utilizando base64.
-- As adivinhações incorretas retornam uma mensagem com dicas.
-  
-## Requisitos
+A aplicação executa inteiramente em containers Docker, orquestrados utilizando o Docker Compose.
 
-- Python 3.8+
-- Flask
-- Um banco de dados local (ou um mecanismo de armazenamento configurado em `current_app.db`)
-- node 18.17.0
+Há um arquivo docker-compose.yml na pasta raiz, que descreve como a aplicação deve ser provisionada. Nele estão descritos três serviços: nginx, backend e db. Há ainda o provisonamento de uma rede para que os containers se comuniquem entre si e um volume para o container de banco de dados, que armazena os dados do PostgreSQL na máquina host, impedindo a perda de dados caso o container do banco de dados seja destruído.
+
+O container nginx executa o servidor HTTP/proxy reverso Nginx. O Nginx fornece os arquivos estáticos da aplicação React (arquivos JS, CSS e HTML). Há um arquivo dockerfile em frontend/frontend.dockerfile que descreve o procedimento de build desse container. Esse build é *multistage*, ou seja, cria um container para efetuar o build da aplicação React (que é descartado após o fim do build) e outro que efetivamente contém a aplicação buildada. Isso é uma funcionalidade muito útil do Docker, pois permite a criação de uma imagem de container menor, pois não há todas as dependências que são necessárias para o build no container que fornece a aplicação frontend (esse container tem apenas o Nginx, sem as ferramentas de build, como o NPM). Além disso, o Nginx desse container atua como *proxy* reverso, redirecionando as requisições HTTP para a API.
+
+O container backend executa a aplicação Python que fornece a API da aplicação. Ele executa um servidor Gunicorn. Seu dockerfile está na raiz do projeto e se chama backend.dockerfile. Nesse caso se preferiu não utilizar *multistage* pois essa aplicação é escrita em Python, que é uma linguagem interpretada, portanto não há build. Esse container contém apenas o Gunicorn e as dependências da API. Há replicação de instâncias da API feita pelo Docker Compose, para garantir maior disponibilidade. Variáveis de ambiente são carregadas via um *dotfile* (.env).
+
+Por fim, há um container que hospeda o banco de dados PostgreSQL. Nele há um volume mapeando a pasta de dados do PostgreSQL para o diretório postgres-data, o que garante que não haverá perda de dados caso esse container seja excluído.
 
 ## Instalação
 
-1. Clone o repositório:
+Como a aplicação está orquestrada utilizando Docker Compose, basta rodar o seguinte comando para iniciá-la:
 
-   ```bash
-   git clone https://github.com/fams/guess_game.git
-   cd guess-game
-   ```
+* ```docker compose up --build```
 
-2. Crie um ambiente virtual e ative-o:
+Variáveis de ambiente são passada por um arquivo .env na raiz do projeto. Há um exemplo de arquivo também na raiz, chamado .env.example. Ele contém as seguintes variáveis:
 
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   venv\Scripts\activate  # Windows
-   ```
+* FLASK_APP: Nome do arquivo inicial da aplicação Flask. Padrão é run.py.
 
-3. Instale as dependências:
+Há variáveis que guardam os dados de conexão da API com o banco de dados:
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+* FLASK_DB_TYPE: Tipo de banco de dados a ser utilizado. Padrão é postgres. Pode se usar o sqlite também;
+FLASK_DB_USER: Nome de usuário do banco de dados PostgreSQL;
+FLASK_DB_NAME: Nome do banco de dados;
+FLASK_DB_HOST: Hostname do banco de dados;
+FLASK_DB_PASSWORD: Senha do banco de dados;
+FLASK_DB_PORT: Porta TCP do PostgreSQL. Padrão é 5432.
 
-4. Configure o banco de dados com as variáveis de ambiente no arquivo start-backend.sh
-    1. Para sqlite
+E a seguir, as variáveis para configuração do PostgreSQL
 
-        ```bash
-            export FLASK_APP="run.py"
-            export FLASK_DB_TYPE="sqlite"            # Use SQLITE
-            export FLASK_DB_PATH="caminho/db.sqlite" # caminho do banco
-        ```
-
-    2. Para Postgres
-
-        ```bash
-            export FLASK_APP="run.py"
-            export FLASK_DB_TYPE="postgres"       # Use postgres
-            export FLASK_DB_USER="postgres"       # Usuário do banco
-            export FLASK_DB_NAME="postgres"       # Nome do Banco
-            export FLASK_DB_PASSWORD="secretpass" # Senha do banco
-            export FLASK_DB_HOST="localhost"      # Hostname
-            export FLASK_DB_PORT="5432"           # Porta
-        ```
-
-    3. Para DynamoDB
-
-        ```bash
-        export FLASK_APP="run.py"
-        export FLASK_DB_TYPE="dynamodb"       # Use postgres
-        export AWS_DEFAULT_REGION="us-east-1" # AWS region
-        export AWS_ACCESS_KEY_ID="FAKEACCESSKEY123456" 
-        export AWS_SECRET_ACCESS_KEY="FakeSecretAccessKey987654321"
-        export AWS_SESSION_TOKEN="FakeSessionTokenABCDEFGHIJKLMNOPQRSTUVXYZ1234567890"
-        ```
-
-5. Execute o backend
-
-   ```bash
-   ./start-backend.sh &
-   ```
-
-## Frontend
-No diretorio de frontend
-
-1. Instale o node com o nvm. Se não tiver o nvm instalado, siga o [tutorial](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
-
-    ```bash
-    nvm install 18.17.0
-    nvm use 18.17.0
-    # Habilite o yarn
-    corepack enable
-    ```
-
-2. Instale as dependências do node com o npm:
-
-    ```bash
-    npm install
-    ```
-
-3. Exporte a url onde está executando o backend e execute o backend.
-
-   ```bash
-    export REACT_APP_BACKEND_URL=http://localhost:5000
-    yarn start
-   ```
-
-## Como Jogar
-
-### 1. Criar um novo jogo
-
-Acesse a url do frontend http://localhost:3000
-
-Digite uma frase secreta
-
-Envie
-
-Salve o game-id
-
-
-### 2. Adivinhar a senha
-
-Acesse a url do frontend http://localhost:3000
-
-Vá para o endponint breaker
-
-entre com o game_id que foi gerado pelo Creator
-
-Tente adivinhar
-
-## Estrutura do Código
-
-### Rotas:
-
-- **`/create`**: Cria um novo jogo. Armazena a senha codificada em base64 e retorna um `game_id`.
-- **`/guess/<game_id>`**: Permite ao usuário adivinhar a senha. Compara a adivinhação com a senha armazenada e retorna o resultado.
-
-### Classes Importantes:
-
-- **`Guess`**: Classe responsável por gerenciar a lógica de comparação entre a senha e a tentativa do jogador.
-- **`WrongAttempt`**: Exceção personalizada que é levantada quando a tentativa está incorreta.
-
-
-
-## Melhorias Futuras
-
-- Implementar autenticação de usuário para salvar e carregar jogos.
-- Adicionar limite de tentativas.
-- Melhorar a interface de feedback para as tentativas de adivinhação.
-
-## Licença
-
-Este projeto está licenciado sob a [MIT License](LICENSE).
-
+POSTGRES_USER: Usuário do PostgreSQL;
+POSTGRES_PASSWORD: Senha do PostgreSQL;
+POSTGRES_DB: Nome do *schema* do PostgreSQL.
